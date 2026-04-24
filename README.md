@@ -42,16 +42,16 @@ Every alternative is missing at least one property BARE provides. See [PRIOR_ART
 
 Download the latest pre-built binary from the Releases page:
 
-    curl -L -o bare https://github.com/Nicholas-Kloster/BARE/releases/latest/download/bare-linux-x86_64
-    curl -L -o bare.sha256 https://github.com/Nicholas-Kloster/BARE/releases/latest/download/bare-linux-x86_64.sha256
-    sha256sum -c bare.sha256
-    chmod +x bare
+    curl -LO https://github.com/Nicholas-Kloster/BARE/releases/latest/download/bare-linux-x86_64
+    curl -LO https://github.com/Nicholas-Kloster/BARE/releases/latest/download/bare-linux-x86_64.sha256
+    sha256sum -c bare-linux-x86_64.sha256
+    chmod +x bare-linux-x86_64
 
 That's it. The binary contains everything — BERT encoder, tokenizer, full Metasploit corpus. No Rust toolchain required.
 
 ## Quick Start
 
-If you downloaded the binary above, you already have bare in your current directory. Skip to the example below.
+If you downloaded the binary above, you already have `bare-linux-x86_64` in your current directory. Skip to the example below.
 
 If you want to build from source (requires Rust 1.70+):
 
