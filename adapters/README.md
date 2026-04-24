@@ -52,3 +52,4 @@ nuclei -u https://target.com -j | python nuclei_to_bare.py | bare
 |---------|--------|----------|----------|
 | nuclei  | [Nuclei](https://github.com/projectdiscovery/nuclei) JSONL | Python | `adapters/nuclei/` |
 | nmap    | [nmap](https://nmap.org/) XML (`-oX`) | Python | `adapters/nmap/` |
+| shodan  | [Shodan](https://www.shodan.io/) JSONL (`shodan download`) | Python | `adapters/shodan/` |
