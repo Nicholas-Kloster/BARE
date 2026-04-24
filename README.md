@@ -14,6 +14,20 @@ Pipe a nuclei scan in, get ranked exploits out:
 
 That is the entire pipeline.
 
+## What Makes BARE Different
+
+Other tools solve pieces of the problem. BARE is the first to combine all five properties in a single binary:
+
+| Tool                    | Offline | Semantic | Single binary | Security-specific | Complete tool |
+|-------------------------|---------|----------|---------------|-------------------|---------------|
+| EdgeBERT                | Yes     | Yes      | Yes           | No                | No (library)  |
+| rust-bert               | No      | Yes      | No (libtorch) | No                | No (library)  |
+| SearchSploit            | Yes     | No       | Yes           | Yes               | Yes           |
+| Metasploit `search`     | Yes     | No       | Yes           | Yes               | Partial       |
+| **BARE**                | **Yes** | **Yes**  | **Yes**       | **Yes**           | **Yes**       |
+
+Every alternative is missing at least one property BARE provides. See [PRIOR_ART.md](PRIOR_ART.md) for a full comparison with release dates and architectural detail.
+
 ## Quick Start
 
 Requirements: Rust toolchain (1.70+), Python 3 (for the adapter only — not for running BARE itself).
