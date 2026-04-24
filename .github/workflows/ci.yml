@@ -52,23 +52,54 @@ jobs:
       - name: Build BARE
         run: cargo build --release
 
-      - name: Run nuclei adapter
+      - name: "[nuclei] Run adapter"
         run: |
           python adapters/nuclei/nuclei_to_bare.py \
             adapters/nuclei/examples/nuclei_sample.jsonl \
-            > /tmp/findings.json
+            > /tmp/nuclei_findings.json
 
-      - name: Validate findings.json against input schema
-        run: ajv validate -s schemas/input.schema.json -d /tmp/findings.json
+      - name: "[nuclei] Validate findings.json against input schema"
+        run: ajv validate -s schemas/input.schema.json -d /tmp/nuclei_findings.json
 
-      - name: Run BARE
-        run: target/release/bare /tmp/findings.json > /tmp/output.json
+      - name: "[nuclei] Run BARE"
+        run: target/release/bare /tmp/nuclei_findings.json > /tmp/nuclei_output.json
 
-      - name: Validate output.json against output schema
-        run: ajv validate -s schemas/output.schema.json -d /tmp/output.json
+      - name: "[nuclei] Validate output.json against output schema"
+        run: ajv validate -s schemas/output.schema.json -d /tmp/nuclei_output.json
+
+      - name: "[nmap] Run adapter"
+        run: |
+          python adapters/nmap/nmap_to_bare.py \
+            adapters/nmap/examples/nmap_sample.xml \
+            > /tmp/nmap_findings.json
+
+      - name: "[nmap] Validate findings.json against input schema"
+        run: ajv validate -s schemas/input.schema.json -d /tmp/nmap_findings.json
+
+      - name: "[nmap] Run BARE"
+        run: target/release/bare /tmp/nmap_findings.json > /tmp/nmap_output.json
+
+      - name: "[nmap] Validate output.json against output schema"
+        run: ajv validate -s schemas/output.schema.json -d /tmp/nmap_output.json
+
+      - name: "[shodan] Run adapter"
+        run: |
+          python adapters/shodan/shodan_to_bare.py \
+            adapters/shodan/examples/shodan_sample.jsonl \
+            > /tmp/shodan_findings.json
+
+      - name: "[shodan] Validate findings.json against input schema"
+        run: ajv validate -s schemas/input.schema.json -d /tmp/shodan_findings.json
+
+      - name: "[shodan] Run BARE"
+        run: target/release/bare /tmp/shodan_findings.json > /tmp/shodan_output.json
+
+      - name: "[shodan] Validate output.json against output schema"
+        run: ajv validate -s schemas/output.schema.json -d /tmp/shodan_output.json
 
       - name: Summary
         run: |
-          FINDING_COUNT=$(python -c "import json; print(len(json.load(open('/tmp/findings.json'))['findings']))")
-          echo "findings.json : $(wc -c < /tmp/findings.json) bytes, ${FINDING_COUNT} findings"
-          echo "output.json   : $(wc -c < /tmp/output.json) bytes"
+          for adapter in nuclei nmap shodan; do
+            FINDING_COUNT=$(python -c "import json; print(len(json.load(open('/tmp/${adapter}_findings.json'))['findings']))")
+            echo "${adapter}: findings=$(wc -c < /tmp/${adapter}_findings.json) bytes, ${FINDING_COUNT} records | output=$(wc -c < /tmp/${adapter}_output.json) bytes"
+          done
