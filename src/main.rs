@@ -9,6 +9,16 @@ static TOKENIZER_BYTES: &[u8] = include_bytes!("../assets/tokenizer.json");
 static CONFIG_BYTES:    &[u8] = include_bytes!("../assets/config.json");
 static WEIGHTS_BYTES:   &[u8] = include_bytes!("../assets/model.safetensors");
 
+const BANNER: &str = r#"
+    ____  ___    ____  ______
+   / __ )/   |  / __ \/ ____/
+  / __  / /| | / /_/ / __/
+ / /_/ / ___ |/ _, _/ /___
+/_____/_/  |_/_/ |_/_____/   v{VERSION}
+
+                           by NuClide
+"#;
+
 use anyhow::{anyhow, Context, Result};
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
@@ -62,7 +72,8 @@ fn main() -> Result<()> {
     while i < args.len() {
         match args[i].as_str() {
             "--version" => {
-                println!("bare v1.0 (input v1, output v1)");
+                let banner = BANNER.replace("{VERSION}", env!("CARGO_PKG_VERSION"));
+                eprintln!("{}", banner);
                 return Ok(());
             }
             "--top" => {
