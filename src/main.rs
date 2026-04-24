@@ -4,17 +4,17 @@ mod output;
 
 use std::io::Read;
 
-static CORPUS_BYTES: &[u8] = include_bytes!("../corpus.bin");
+static CORPUS_BYTES:    &[u8] = include_bytes!("../corpus.bin");
+static TOKENIZER_BYTES: &[u8] = include_bytes!("../assets/tokenizer.json");
+static CONFIG_BYTES:    &[u8] = include_bytes!("../assets/config.json");
+static WEIGHTS_BYTES:   &[u8] = include_bytes!("../assets/model.safetensors");
 
 use anyhow::{anyhow, Context, Result};
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::models::bert::{BertModel, Config, DTYPE};
-use hf_hub::{api::tokio::Api, Repo, RepoType};
 use sha2::{Digest, Sha256};
 use tokenizers::Tokenizer;
-
-const MODEL_ID: &str = "sentence-transformers/all-MiniLM-L6-v2";
 
 fn corpus_sha256() -> String {
     let mut hasher = Sha256::new();
@@ -52,8 +52,7 @@ fn category_from_module(name: &str) -> String {
     name.splitn(2, '_').next().unwrap_or("unknown").to_string()
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     // ── CLI parsing ───────────────────────────────────────────────────────────
     let args: Vec<String> = std::env::args().collect();
     let mut top_k: usize = 3;
@@ -100,29 +99,20 @@ async fn main() -> Result<()> {
 
     let doc = input::parse_and_validate(&raw_input).context("input validation failed")?;
 
-    // ── Model setup ───────────────────────────────────────────────────────────
+    // ── Load embedded model assets ────────────────────────────────────────────
     let device = Device::Cpu;
 
-    eprintln!("[1/3] Resolving model files...");
-    let api  = Api::new()?;
-    let repo = api.repo(Repo::new(MODEL_ID.to_string(), RepoType::Model));
-    let tokenizer_path = repo.get("tokenizer.json").await?;
-    let weights_path   = repo.get("model.safetensors").await?;
-    let config_path    = repo.get("config.json").await?;
-    eprintln!("[+] Files ready.");
-
-    eprintln!("[2/3] Loading tokenizer...");
-    let tokenizer = Tokenizer::from_file(tokenizer_path)
+    eprintln!("[1/3] Loading tokenizer...");
+    let tokenizer = Tokenizer::from_bytes(TOKENIZER_BYTES)
         .map_err(|e| anyhow!("tokenizer load failed: {}", e))?;
 
-    eprintln!("[3/3] Loading model weights...");
-    let config_str = std::fs::read_to_string(config_path)?;
-    let config: Config = serde_json::from_str(&config_str)?;
-    let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[weights_path], DTYPE, &device)? };
+    eprintln!("[2/3] Loading model weights...");
+    let config: Config = serde_json::from_slice(CONFIG_BYTES)?;
+    let vb = VarBuilder::from_buffered_safetensors(WEIGHTS_BYTES.to_vec(), DTYPE, &device)?;
     let model = BertModel::load(vb, &config)?;
     eprintln!("[+] Model loaded.");
 
-    // ── Load corpus ───────────────────────────────────────────────────────────
+    // ── Load embedded corpus ──────────────────────────────────────────────────
     let records = corpus::load_corpus(CORPUS_BYTES)?;
     eprintln!("[+] Corpus: {} records", records.len());
 

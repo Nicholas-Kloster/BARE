@@ -35,11 +35,19 @@ jobs:
       - name: Install ajv-cli
         run: npm install -g ajv-cli
 
-      - name: Cache HuggingFace model
+      - name: Cache model weights
+        id: cache-weights
         uses: actions/cache@v4
         with:
-          path: ~/.cache/huggingface
-          key: hf-all-MiniLM-L6-v2
+          path: assets/model.safetensors
+          key: bert-all-MiniLM-L6-v2-weights
+
+      - name: Download BERT model weights
+        if: steps.cache-weights.outputs.cache-hit != 'true'
+        run: |
+          curl -L -o assets/model.safetensors \
+            https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/model.safetensors
+          ls -lh assets/
 
       - name: Build BARE
         run: cargo build --release
