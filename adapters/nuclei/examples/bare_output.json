@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "source": "nuclei",
+  "findings": [
+    {
+      "id": "CVE-2023-22527",
+      "title": "Atlassian Confluence SSTI RCE",
+      "description": "Atlassian Confluence SSTI RCE. Atlassian Confluence Server and Data Center are vulnerable to server-side template injection via OGNL injection in the /template/aui/text-inline.vm endpoint. Unauthenticated attackers can achieve remote code execution as the Confluence process user. CVE: CVE-2023-22527. CWE: CWE-74. Matched: ssti-rce. Extracted: uid=1000(confluence) gid=1000(confluence). Tags: confluence, rce, cve, oast, injection.",
+      "target": "https://confluence.example.com/template/aui/text-inline.vm",
+      "severity": "critical",
+      "metadata": {
+        "name": "Atlassian Confluence SSTI RCE",
+        "severity": "critical",
+        "tags": [
+          "confluence",
+          "rce",
+          "cve",
+          "oast",
+          "injection"
+        ],
+        "reference": [
+          "https://jira.atlassian.com/browse/CONFSERVER-93923"
+        ],
+        "classification": {
+          "cve-id": [
+            "CVE-2023-22527"
+          ],
+          "cwe-id": [
+            "CWE-74"
+          ],
+          "cvss-metrics": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+          "cvss-score": 10
+        },
+        "template-id": "CVE-2023-22527",
+        "matcher-name": "ssti-rce",
+        "extracted-results": [
+          "uid=1000(confluence) gid=1000(confluence)"
+        ],
+        "ip": "203.0.113.42",
+        "timestamp": "2024-01-22T10:14:33.001Z",
+        "host": "confluence.example.com",
+        "request": "POST /template/aui/text-inline.vm HTTP/1.1\r\nHost: confluence.example.com\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\nlabel=%24%7B%22freemarker.template.utility.Execute%22%3Fnew()(%22id%22)%7D",
+        "response": "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\nuid=1000(confluence) gid=1000(confluence)"
+      }
+    },
+    {
+      "id": "apache-druid-log4j",
+      "title": "Apache Druid Log4Shell RCE",
+      "description": "Apache Druid Log4Shell RCE. Apache Druid is vulnerable to Log4Shell (CVE-2021-44228) via user-controlled input in request parameters that is logged using Log4j 2. The vulnerability allows unauthenticated remote code execution via JNDI lookup injection through the LDAP protocol. CVE: CVE-2021-44228. CVE: CVE-2021-45046. CWE: CWE-917. Matched: oast-interaction. Tags: apache, druid, log4j, cve, rce, oast.",
+      "target": "http://druid.internal:8888/druid/indexer/v1/sampler",
+      "severity": "critical",
+      "metadata": {
+        "name": "Apache Druid Log4Shell RCE",
+        "severity": "critical",
+        "tags": [
+          "apache",
+          "druid",
+          "log4j",
+          "cve",
+          "rce",
+          "oast"
+        ],
+        "classification": {
+          "cve-id": [
+            "CVE-2021-44228",
+            "CVE-2021-45046"
+          ],
+          "cwe-id": [
+            "CWE-917"
+          ],
+          "cvss-score": 10
+        },
+        "template-id": "apache-druid-log4j",
+        "matcher-name": "oast-interaction",
+        "ip": "10.0.1.55",
+        "timestamp": "2024-01-22T10:16:07.882Z",
+        "host": "druid.internal"
+      }
+    },
+    {
+      "id": "springboot-actuator-env",
+      "title": "Spring Boot Actuator Environment Disclosure",
+      "description": "Spring Boot Actuator Environment Disclosure. Spring Boot Actuator /actuator/env endpoint is exposed without authentication. This endpoint discloses all application environment variables and configuration properties, which may include database credentials, API keys, and cloud provider secrets. Extracted: {\"activeProfiles\":[\"prod\"],\"propertySources\":[{\"name\":\"applicationConfig\",\"properties\":{\"spring.datasource.password\":{\"value\":\"******\"}}}]}. Tags: springboot, actuator, exposure, config.",
+      "target": "http://app.example.com/actuator/env",
+      "severity": "high",
+      "metadata": {
+        "name": "Spring Boot Actuator Environment Disclosure",
+        "severity": "high",
+        "tags": [
+          "springboot",
+          "actuator",
+          "exposure",
+          "config"
+        ],
+        "reference": [
+          "https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html"
+        ],
+        "template-id": "springboot-actuator-env",
+        "extracted-results": [
+          "{\"activeProfiles\":[\"prod\"],\"propertySources\":[{\"name\":\"applicationConfig\",\"properties\":{\"spring.datasource.password\":{\"value\":\"******\"}}}]}"
+        ],
+        "ip": "198.51.100.7",
+        "timestamp": "2024-01-22T10:18:44.112Z",
+        "host": "app.example.com"
+      }
+    },
+    {
+      "id": "nginx-open-redirect",
+      "title": "Nginx Open Redirect via CRLF Injection",
+      "description": "Nginx Open Redirect via CRLF Injection. The Nginx configuration is vulnerable to open redirect via CRLF injection in the Location header. An attacker can craft a URL that causes the server to redirect users to an arbitrary external domain, enabling phishing and credential theft attacks. Matched: redirect-detected. Tags: nginx, redirect, crlf, injection.",
+      "target": "https://www.example.com/redirect?url=https://evil.com",
+      "severity": "medium",
+      "metadata": {
+        "name": "Nginx Open Redirect via CRLF Injection",
+        "severity": "medium",
+        "tags": [
+          "nginx",
+          "redirect",
+          "crlf",
+          "injection"
+        ],
+        "template-id": "nginx-open-redirect",
+        "matcher-name": "redirect-detected",
+        "timestamp": "2024-01-22T10:21:02.345Z",
+        "host": "www.example.com"
+      }
+    },
+    {
+      "id": "exposed-git-config",
+      "title": "Exposed .git/config File",
+      "description": "Exposed .git/config File. The .git/config file is publicly accessible on this web server. This file may disclose the remote repository URL, branch names, and potentially credentials embedded in the remote URL, enabling source code theft and further reconnaissance. Extracted: [core]\n\trepositoryformatversion = 0\n\tfilemode = true\n[remote \"origin\"]\n\turl = https://github.com/example-org/private-repo. Tags: git, exposure, misconfig, config.",
+      "target": "https://static.example.com/.git/config",
+      "severity": "low",
+      "metadata": {
+        "name": "Exposed .git/config File",
+        "severity": "low",
+        "tags": [
+          "git",
+          "exposure",
+          "misconfig",
+          "config"
+        ],
+        "template-id": "exposed-git-config",
+        "extracted-results": [
+          "[core]\n\trepositoryformatversion = 0\n\tfilemode = true\n[remote \"origin\"]\n\turl = https://github.com/example-org/private-repo"
+        ],
+        "timestamp": "2024-01-22T10:22:55.991Z",
+        "host": "static.example.com"
+      }
+    }
+  ]
+}
