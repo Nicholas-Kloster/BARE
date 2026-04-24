@@ -1,5 +1,7 @@
 # BARE
 
+[![CI](https://github.com/Nicholas-Kloster/BARE/actions/workflows/ci.yml/badge.svg)](https://github.com/Nicholas-Kloster/BARE/actions/workflows/ci.yml)
+
 Binary Anywhere Rust Encoder — semantic search for security scanner output, compiled into a single binary.
 
 ## What It Does

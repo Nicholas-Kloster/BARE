@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install ajv-cli
+        run: npm install -g ajv-cli
+
+      - name: Cache HuggingFace model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-all-MiniLM-L6-v2
+
+      - name: Build BARE
+        run: cargo build --release
+
+      - name: Run nuclei adapter
+        run: |
+          python adapters/nuclei/nuclei_to_bare.py \
+            adapters/nuclei/examples/nuclei_sample.jsonl \
+            > /tmp/findings.json
+
+      - name: Validate findings.json against input schema
+        run: ajv validate -s schemas/input.schema.json -d /tmp/findings.json
+
+      - name: Run BARE
+        run: target/release/bare /tmp/findings.json > /tmp/output.json
+
+      - name: Validate output.json against output schema
+        run: ajv validate -s schemas/output.schema.json -d /tmp/output.json
+
+      - name: Summary
+        run: |
+          FINDING_COUNT=$(python -c "import json; print(len(json.load(open('/tmp/findings.json'))['findings']))")
+          echo "findings.json : $(wc -c < /tmp/findings.json) bytes, ${FINDING_COUNT} findings"
+          echo "output.json   : $(wc -c < /tmp/output.json) bytes"
