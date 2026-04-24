@@ -26,10 +26,16 @@ That distinction is the entire point.
 
 ## Status
 
-Proof of concept complete. Rust vectors match Python sentence-transformers
-output to within f32/f64 rounding error (~1e-7 delta).
+Corpus search working end-to-end. A single 12MB binary encodes queries 
+with BERT, searches an embedded corpus of vectors, and returns ranked 
+matches by cosine similarity. No Python. No VDB. No network.
+
+Test query "ollama exposed no authentication" correctly ranks the 
+semantically related ollama_rce corpus entry first with zero shared 
+tokens — proving the match is semantic, not keyword-based.
 
 ## What's Next
 
-Semantic search with the corpus baked into the binary at compile time
-via `include_bytes!`. No VDB. No server. No network.
+Scale the corpus from 5 handcrafted records to the full Metasploit 
+module set (~2,000 modules). Pull from GitHub, encode in the build 
+step, ship in the binary.

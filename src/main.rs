@@ -15,6 +15,10 @@
 /// Usage:
 ///   cargo run --release
 
+mod corpus;
+
+static CORPUS_BYTES: &[u8] = include_bytes!("../corpus.bin");
+
 use anyhow::{Ok, Result};
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
@@ -23,8 +27,7 @@ use hf_hub::{api::tokio::Api, Repo, RepoType};
 use tokenizers::Tokenizer;
 
 // ── The sentence we're encoding ───────────────────────────────────────────────
-// Change this to match whatever you ran in baseline.py
-const QUERY: &str = "unauthenticated ollama api endpoint";
+const QUERY: &str = "ollama exposed no authentication";
 
 // ── Model on HuggingFace Hub ──────────────────────────────────────────────────
 const MODEL_ID: &str = "sentence-transformers/all-MiniLM-L6-v2";
@@ -127,20 +130,32 @@ async fn main() -> Result<()> {
 
     let normalized = mean_pooled.broadcast_div(&norm)?;   // [1, hidden_size]
 
-    // ── Step 8: Extract and print ─────────────────────────────────────────────
-    let vec: Vec<f32> = normalized.squeeze(0)?.to_vec1()?;
+    // ── Step 8: Extract query vector ─────────────────────────────────────────
+    let query_vec: Vec<f32> = normalized.squeeze(0)?.to_vec1()?;
 
-    // Verify the norm is ~1.0 (sanity check)
-    let l2_norm: f32 = vec.iter().map(|x| x * x).sum::<f32>().sqrt();
+    // ── Step 9: Load embedded corpus and rank by cosine similarity ────────────
+    // All vectors are L2-normalized, so cosine similarity == dot product.
+    let records = corpus::load_corpus(CORPUS_BYTES)?;
 
-    println!("\n── Results ──────────────────────────────────────");
-    println!("   Vector length : {}", vec.len());
-    println!("   First 5 floats: {:?}", &vec[..5]);
-    println!("   Last 5 floats : {:?}", &vec[vec.len()-5..]);
-    println!("   L2 norm       : {:.6}  (should be ~1.0)", l2_norm);
-    println!("─────────────────────────────────────────────────");
-    println!("\n   Compare first 5 floats to baseline.py output.");
-    println!("   If they match — the idea works.\n");
+    let mut scores: Vec<(&str, f32)> = records
+        .iter()
+        .map(|r| {
+            let sim: f32 = query_vec.iter()
+                .zip(r.vector.iter())
+                .map(|(a, b)| a * b)
+                .sum();
+            (r.name.as_str(), sim)
+        })
+        .collect();
+
+    scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+    println!("\n── Corpus Search Results ────────────────────────");
+    println!("   Query: \"{}\"\n", QUERY);
+    for (rank, (name, score)) in scores.iter().enumerate() {
+        println!("   #{:<2} {:.4}  {}", rank + 1, score, name);
+    }
+    println!("─────────────────────────────────────────────────\n");
 
     Ok(())
 }
