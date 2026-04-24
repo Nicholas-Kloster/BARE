@@ -26,7 +26,7 @@ That distinction is the entire point.
 
 ## Current Status
 
-Quality validated at scale. A single 12MB binary:
+Quality validated across diverse categories. A single 12MB binary:
 
 - Loads a BERT encoder (sentence-transformers/all-MiniLM-L6-v2)
 - Loads an embedded corpus of pre-encoded vectors (via `include_bytes!`)
@@ -35,7 +35,8 @@ Quality validated at scale. A single 12MB binary:
 - Returns ranked matches
 
 Rust output vectors match Python sentence-transformers output to within 
-f32/f64 rounding error (~1e-7 delta). Stability test across 50 and 250 
-real Metasploit module descriptions confirms the model discriminates 
-correctly — queries with ground-truth matches in the corpus return them 
-as the top result consistently.
+f32/f64 rounding error (~1e-7 delta). Tested with 400 real Metasploit 
+modules spanning web exploits, Linux privilege escalation, Windows SMB 
+protocol exploits, and Unix webapp vulnerabilities — the model 
+discriminates correctly across categories, pulling semantically relevant 
+modules to the top while pushing unrelated categories away.

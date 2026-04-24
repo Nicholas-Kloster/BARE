@@ -33,7 +33,7 @@ DIMS = 384
 VERSION = 0x01
 
 import sys
-INFILE = sys.argv[1] if len(sys.argv) > 1 else "modules_250.json"
+INFILE = sys.argv[1] if len(sys.argv) > 1 else "modules_400.json"
 
 with open(INFILE) as f:
     modules = json.load(f)
