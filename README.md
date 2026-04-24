@@ -38,9 +38,22 @@ Other tools solve pieces of the problem. BARE is the first to combine all five p
 
 Every alternative is missing at least one property BARE provides. See [PRIOR_ART.md](PRIOR_ART.md) for a full comparison with release dates and architectural detail.
 
+## Install
+
+Download the latest pre-built binary from the Releases page:
+
+    curl -L -o bare https://github.com/Nicholas-Kloster/BARE/releases/latest/download/bare-linux-x86_64
+    curl -L -o bare.sha256 https://github.com/Nicholas-Kloster/BARE/releases/latest/download/bare-linux-x86_64.sha256
+    sha256sum -c bare.sha256
+    chmod +x bare
+
+That's it. The binary contains everything — BERT encoder, tokenizer, full Metasploit corpus. No Rust toolchain required.
+
 ## Quick Start
 
-Requirements: Rust toolchain (1.70+), Python 3 (for the adapter only — not for running BARE itself).
+If you downloaded the binary above, you already have bare in your current directory. Skip to the example below.
+
+If you want to build from source (requires Rust 1.70+):
 
     git clone https://github.com/Nicholas-Kloster/BARE
     cd BARE
@@ -157,9 +170,8 @@ Auxiliary scanner modules tend to outrank exploit modules for queries written in
 
 ## What's Next
 
-- More adapters (nmap, Trivy, Semgrep)
+- More adapters (Trivy, Semgrep)
 - Category-aware ranking to address scanner-vs-exploit prioritization
-- Pre-built release binaries on GitHub Releases
 - Performance benchmarks at full corpus scale
 
 ## Build From Source

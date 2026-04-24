@@ -1,0 +1,56 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Download BERT model weights
+        run: |
+          curl -L -o assets/model.safetensors \
+            https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/model.safetensors
+          ls -lh assets/
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Stage binary with platform suffix
+        run: cp target/release/bare bare-linux-x86_64
+
+      - name: Generate SHA-256 checksum
+        run: sha256sum bare-linux-x86_64 > bare-linux-x86_64.sha256
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            bare-linux-x86_64
+            bare-linux-x86_64.sha256
+          generate_release_notes: true
+          draft: false
+          prerelease: false
