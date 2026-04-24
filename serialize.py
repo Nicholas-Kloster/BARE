@@ -3,11 +3,10 @@ serialize.py
 ────────────
 Encodes a corpus and writes corpus.bin per FORMAT.md.
 
-Now reads from modules_50.json (50 real Metasploit modules).
-Encode field: name + " " + description (concatenated for richer signal).
+Default input: modules_full.json
+Override:      python serialize.py <path-to-json>
 
-Usage:
-    python serialize.py
+Encode field: name + " " + description (concatenated for richer signal).
 
 # ── Original hardcoded 5-record corpus (kept for reference) ──────────────────
 # CORPUS = [
@@ -26,36 +25,37 @@ Usage:
 """
 
 import json
+import os
 import struct
+import sys
+
 from sentence_transformers import SentenceTransformer
 
-DIMS = 384
+DIMS    = 384
 VERSION = 0x01
+INFILE  = sys.argv[1] if len(sys.argv) > 1 else "modules_full.json"
 
-import sys
-INFILE = sys.argv[1] if len(sys.argv) > 1 else "modules_400.json"
-
+print(f"[*] Reading {INFILE}...")
 with open(INFILE) as f:
     modules = json.load(f)
 
-# (id, encode_text) pairs — name prepended to description for richer signal
-CORPUS = [
-    (m["id"], m["name"] + " " + m["description"])
-    for m in modules
-]
+names = [m["id"] for m in modules]
+descs = [m["name"] + " " + m["description"] for m in modules]
 
-print("[*] Loading model...")
+print(f"[*] Loading model...")
 model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
-print(f"[*] Encoding {len(CORPUS)} records...")
-names = [name for name, _ in CORPUS]
-descs = [desc for _, desc in CORPUS]
-vectors = model.encode(descs, normalize_embeddings=True)
+print(f"[*] Encoding {len(names)} records (this will take a while on CPU)...")
+vectors = model.encode(
+    descs,
+    normalize_embeddings=True,
+    batch_size=64,
+    show_progress_bar=True,
+)
 
+print(f"[*] Writing corpus.bin...")
 out = open("corpus.bin", "wb")
-
-# Header: magic(4s) + version(B) + dims(H) + count(I)
-out.write(struct.pack("<4sBHI", b"BARE", VERSION, DIMS, len(CORPUS)))
+out.write(struct.pack("<4sBHI", b"BARE", VERSION, DIMS, len(names)))
 
 for name, vec in zip(names, vectors):
     name_bytes = name.encode("utf-8")
@@ -65,12 +65,11 @@ for name, vec in zip(names, vectors):
 
 out.close()
 
-import os
-size = os.path.getsize("corpus.bin")
-print(f"\n[+] corpus.bin written")
-print(f"    Records : {len(CORPUS)}")
-print(f"    Size    : {size} bytes ({size / 1024:.2f} KB)")
-
+size     = os.path.getsize("corpus.bin")
 expected = 11 + sum(2 + len(n.encode()) + DIMS * 4 for n in names)
-print(f"    Expected: {expected} bytes")
-print(f"    Match   : {'YES' if size == expected else 'NO — MISMATCH'}")
+
+print(f"\n[+] corpus.bin written")
+print(f"    Records  : {len(names)}")
+print(f"    Size     : {size:,} bytes ({size / 1024 / 1024:.2f} MB)")
+print(f"    Expected : {expected:,} bytes")
+print(f"    Match    : {'YES' if size == expected else 'NO — MISMATCH'}")
