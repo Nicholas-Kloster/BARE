@@ -21,6 +21,7 @@
         <service name="http" product="Apache httpd" version="2.4.49" ostype="" extrainfo="" method="probed" conf="10"/>
         <script id="http-title" output="Apache2 Ubuntu Default Page: It works"/>
         <script id="http-server-header" output="Apache/2.4.49 (Ubuntu)"/>
+        <script id="http-headers" output="Server: Apache/2.4.49 (Ubuntu)&#xa;Content-Type: text/html; charset=UTF-8&#xa;X-Content-Type-Options: nosniff&#xa;X-Frame-Options: SAMEORIGIN&#xa;Connection: close"/>
       </port>
       <port protocol="tcp" portid="443">
         <state state="open" reason="syn-ack" reason_ttl="64"/>

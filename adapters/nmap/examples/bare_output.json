@@ -11,36 +11,25 @@
     {
       "id": "tcp_80_192.168.1.10",
       "title": "http (Apache httpd)",
-      "description": "http Apache httpd 2.4.49",
+      "description": "http Apache httpd 2.4.49 http-title: Apache2 Ubuntu Default Page: It works http-server-header: Apache/2.4.49 (Ubuntu) http-headers: Server: Apache/2.4.49 (Ubuntu)\nContent-Type: text/html; charset=UTF-8\nX-Content-Type-Options: nosniff\nX-Frame-Options: SAMEORIGIN\nConnection: close",
       "target": "192.168.1.10:80/tcp",
       "metadata": {
         "scripts": [
-          {
-            "id": "http-title",
-            "output": "Apache2 Ubuntu Default Page: It works"
-          },
-          {
-            "id": "http-server-header",
-            "output": "Apache/2.4.49 (Ubuntu)"
-          }
+          "http-title",
+          "http-server-header",
+          "http-headers"
         ]
       }
     },
     {
       "id": "tcp_443_192.168.1.10",
       "title": "ssl/http (nginx)",
-      "description": "ssl/http nginx 1.22.1",
+      "description": "ssl/http nginx 1.22.1 http-title: Welcome to nginx! ssl-cert: Subject: commonName=webserver.local\nIssuer: commonName=webserver.local\nNot valid before: 2026-01-01T00:00:00\nNot valid after: 2027-01-01T00:00:00",
       "target": "192.168.1.10:443/tcp",
       "metadata": {
         "scripts": [
-          {
-            "id": "http-title",
-            "output": "Welcome to nginx!"
-          },
-          {
-            "id": "ssl-cert",
-            "output": "Subject: commonName=webserver.local\nIssuer: commonName=webserver.local\nNot valid before: 2026-01-01T00:00:00\nNot valid after: 2027-01-01T00:00:00"
-          }
+          "http-title",
+          "ssl-cert"
         ]
       }
     },
@@ -65,28 +54,22 @@
     {
       "id": "tcp_8443_192.168.1.20",
       "title": "ssl/https (Apache Tomcat)",
-      "description": "ssl/https Apache Tomcat 9.0.85",
+      "description": "ssl/https Apache Tomcat 9.0.85 http-title: Apache Tomcat/9.0.85",
       "target": "192.168.1.20:8443/tcp",
       "metadata": {
         "scripts": [
-          {
-            "id": "http-title",
-            "output": "Apache Tomcat/9.0.85"
-          }
+          "http-title"
         ]
       }
     },
     {
       "id": "tcp_9200_192.168.1.20",
       "title": "http (Elasticsearch REST API)",
-      "description": "http Elasticsearch REST API 8.13.0",
+      "description": "http Elasticsearch REST API 8.13.0 http-title: 404 Content-Type: application/json;charset=UTF-8",
       "target": "192.168.1.20:9200/tcp",
       "metadata": {
         "scripts": [
-          {
-            "id": "http-title",
-            "output": "404 Content-Type: application/json;charset=UTF-8"
-          }
+          "http-title"
         ]
       }
     },

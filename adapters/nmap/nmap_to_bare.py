@@ -48,24 +48,39 @@ def build_title(service: ET.Element | None, protocol: str, portid: str) -> str:
     return f"{protocol}/{portid}"
 
 
-def build_description(service: ET.Element | None, protocol: str, portid: str) -> str:
-    """
-    Construct a description by mechanically concatenating available nmap fields.
+SCRIPT_OUTPUT_MAX = 300
 
-    Concatenates in order: name, product, version, ostype, extrainfo.
+
+def build_description(
+    service: ET.Element | None,
+    port: ET.Element,
+    protocol: str,
+    portid: str,
+) -> str:
+    """
+    Construct a description by mechanically concatenating available nmap fields
+    and NSE script output.
+
+    Concatenates in order: service name/product/version/ostype/extrainfo,
+    then each script's id and truncated output (300 chars max per script).
     Only non-empty values are included. No vulnerability context is added —
     only what nmap actually reported.
 
-    Falls back to "open {protocol} port {portid}" if no service data exists.
+    Falls back to "open {protocol} port {portid}" if nothing else is present.
     """
-    if service is None:
-        return f"open {protocol} port {portid}"
-
     parts: list[str] = []
-    for attr in ("name", "product", "version", "ostype", "extrainfo"):
-        val = service.get(attr, "").strip()
-        if val:
-            parts.append(val)
+
+    if service is not None:
+        for attr in ("name", "product", "version", "ostype", "extrainfo"):
+            val = service.get(attr, "").strip()
+            if val:
+                parts.append(val)
+
+    for script in port.findall("script"):
+        sid = script.get("id", "").strip()
+        output = script.get("output", "").strip()
+        if sid and output:
+            parts.append(f"{sid}: {output[:SCRIPT_OUTPUT_MAX]}")
 
     if not parts:
         return f"open {protocol} port {portid}"
@@ -75,21 +90,16 @@ def build_description(service: ET.Element | None, protocol: str, portid: str) ->
 
 def build_metadata(port: ET.Element) -> dict[str, Any] | None:
     """
-    Extract NSE script results from a <port> element into the metadata field.
+    Record which NSE scripts fired on this port.
 
-    Returns None if no <script> child elements are present, so the caller
-    can omit the metadata key entirely per INPUT_FORMAT.md.
+    Full script output goes into the description for BARE to encode.
+    Metadata carries only script IDs for downstream consumers that want
+    to know which scripts ran without re-parsing the description field.
+
+    Returns None if no <script> child elements are present.
     """
-    scripts = port.findall("script")
-    if not scripts:
-        return None
-
-    entries = [
-        {"id": s.get("id", ""), "output": s.get("output", "")}
-        for s in scripts
-        if s.get("id")
-    ]
-    return {"scripts": entries} if entries else None
+    ids = [s.get("id", "") for s in port.findall("script") if s.get("id")]
+    return {"scripts": ids} if ids else None
 
 
 def finding_id(protocol: str, portid: str, host_addr: str) -> str:
@@ -119,7 +129,7 @@ def convert_port(port: ET.Element, host_addr: str) -> dict[str, Any] | None:
 
     fid = finding_id(protocol, portid, host_addr)
     title = build_title(service, protocol, portid)
-    description = build_description(service, protocol, portid)
+    description = build_description(service, port, protocol, portid)
     target = f"{host_addr}:{portid}/{protocol}"
 
     finding: dict[str, Any] = {
