@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "source": "nmap",
+  "findings": [
+    {
+      "id": "tcp_22_192.168.1.10",
+      "title": "ssh (OpenSSH)",
+      "description": "ssh OpenSSH 8.9p1 Ubuntu 3ubuntu0.7 Linux Ubuntu Linux; protocol 2.0",
+      "target": "192.168.1.10:22/tcp"
+    },
+    {
+      "id": "tcp_80_192.168.1.10",
+      "title": "http (Apache httpd)",
+      "description": "http Apache httpd 2.4.49",
+      "target": "192.168.1.10:80/tcp",
+      "metadata": {
+        "scripts": [
+          {
+            "id": "http-title",
+            "output": "Apache2 Ubuntu Default Page: It works"
+          },
+          {
+            "id": "http-server-header",
+            "output": "Apache/2.4.49 (Ubuntu)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tcp_443_192.168.1.10",
+      "title": "ssl/http (nginx)",
+      "description": "ssl/http nginx 1.22.1",
+      "target": "192.168.1.10:443/tcp",
+      "metadata": {
+        "scripts": [
+          {
+            "id": "http-title",
+            "output": "Welcome to nginx!"
+          },
+          {
+            "id": "ssl-cert",
+            "output": "Subject: commonName=webserver.local\nIssuer: commonName=webserver.local\nNot valid before: 2026-01-01T00:00:00\nNot valid after: 2027-01-01T00:00:00"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tcp_3306_192.168.1.10",
+      "title": "mysql (MySQL)",
+      "description": "mysql MySQL 8.0.37 unauthorized",
+      "target": "192.168.1.10:3306/tcp"
+    },
+    {
+      "id": "tcp_22_192.168.1.20",
+      "title": "ssh (OpenSSH)",
+      "description": "ssh OpenSSH 7.9p1 Debian 10+deb10u4 Linux Debian Linux; protocol 2.0",
+      "target": "192.168.1.20:22/tcp"
+    },
+    {
+      "id": "tcp_5432_192.168.1.20",
+      "title": "postgresql (PostgreSQL DB)",
+      "description": "postgresql PostgreSQL DB 9.6.0 or later",
+      "target": "192.168.1.20:5432/tcp"
+    },
+    {
+      "id": "tcp_8443_192.168.1.20",
+      "title": "ssl/https (Apache Tomcat)",
+      "description": "ssl/https Apache Tomcat 9.0.85",
+      "target": "192.168.1.20:8443/tcp",
+      "metadata": {
+        "scripts": [
+          {
+            "id": "http-title",
+            "output": "Apache Tomcat/9.0.85"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tcp_9200_192.168.1.20",
+      "title": "http (Elasticsearch REST API)",
+      "description": "http Elasticsearch REST API 8.13.0",
+      "target": "192.168.1.20:9200/tcp",
+      "metadata": {
+        "scripts": [
+          {
+            "id": "http-title",
+            "output": "404 Content-Type: application/json;charset=UTF-8"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tcp_3389_192.168.1.30",
+      "title": "ms-wbt-server (Microsoft Terminal Services)",
+      "description": "ms-wbt-server Microsoft Terminal Services Windows",
+      "target": "192.168.1.30:3389/tcp"
+    },
+    {
+      "id": "tcp_445_192.168.1.30",
+      "title": "microsoft-ds",
+      "description": "microsoft-ds Windows Windows Server 2019 Datacenter 17763",
+      "target": "192.168.1.30:445/tcp"
+    },
+    {
+      "id": "tcp_1337_192.168.1.30",
+      "title": "tcp/1337",
+      "description": "open tcp port 1337",
+      "target": "192.168.1.30:1337/tcp"
+    }
+  ]
+}

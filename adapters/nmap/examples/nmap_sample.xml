@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<nmaprun scanner="nmap" args="nmap -sV -sC -oX - 192.168.1.0/24" start="1745510400" startstr="Thu Apr 24 16:00:00 2026" version="7.95" xmloutputversion="1.05">
+  <scaninfo type="syn" protocol="tcp" numservices="1000" services="1-1000"/>
+
+  <!-- Host 1: web server with multiple services and script output -->
+  <host starttime="1745510401" endtime="1745510500">
+    <status state="up" reason="echo-reply" reason_ttl="64"/>
+    <address addr="192.168.1.10" addrtype="ipv4"/>
+    <hostnames>
+      <hostname name="webserver.local" type="PTR"/>
+    </hostnames>
+    <ports>
+      <port protocol="tcp" portid="22">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="ssh" product="OpenSSH" version="8.9p1 Ubuntu 3ubuntu0.7" ostype="Linux" extrainfo="Ubuntu Linux; protocol 2.0" method="probed" conf="10"/>
+      </port>
+      <port protocol="tcp" portid="80">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="http" product="Apache httpd" version="2.4.49" ostype="" extrainfo="" method="probed" conf="10"/>
+        <script id="http-title" output="Apache2 Ubuntu Default Page: It works"/>
+        <script id="http-server-header" output="Apache/2.4.49 (Ubuntu)"/>
+      </port>
+      <port protocol="tcp" portid="443">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="ssl/http" product="nginx" version="1.22.1" ostype="" extrainfo="" method="probed" conf="10"/>
+        <script id="http-title" output="Welcome to nginx!"/>
+        <script id="ssl-cert" output="Subject: commonName=webserver.local&#xa;Issuer: commonName=webserver.local&#xa;Not valid before: 2026-01-01T00:00:00&#xa;Not valid after: 2027-01-01T00:00:00"/>
+      </port>
+      <port protocol="tcp" portid="3306">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="mysql" product="MySQL" version="8.0.37" ostype="" extrainfo="unauthorized" method="probed" conf="10"/>
+      </port>
+      <!-- closed port — should be skipped -->
+      <port protocol="tcp" portid="8080">
+        <state state="closed" reason="rst" reason_ttl="64"/>
+        <service name="http-proxy" method="table" conf="3"/>
+      </port>
+    </ports>
+  </host>
+
+  <!-- Host 2: database and app server, one filtered port -->
+  <host starttime="1745510501" endtime="1745510600">
+    <status state="up" reason="echo-reply" reason_ttl="64"/>
+    <address addr="192.168.1.20" addrtype="ipv4"/>
+    <hostnames/>
+    <ports>
+      <port protocol="tcp" portid="22">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="ssh" product="OpenSSH" version="7.9p1 Debian 10+deb10u4" ostype="Linux" extrainfo="Debian Linux; protocol 2.0" method="probed" conf="10"/>
+      </port>
+      <port protocol="tcp" portid="5432">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="postgresql" product="PostgreSQL DB" version="9.6.0 or later" ostype="" extrainfo="" method="probed" conf="10"/>
+      </port>
+      <port protocol="tcp" portid="8443">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="ssl/https" product="Apache Tomcat" version="9.0.85" ostype="" extrainfo="" method="probed" conf="10"/>
+        <script id="http-title" output="Apache Tomcat/9.0.85"/>
+      </port>
+      <port protocol="tcp" portid="9200">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="http" product="Elasticsearch REST API" version="8.13.0" ostype="" extrainfo="" method="probed" conf="10"/>
+        <script id="http-title" output="404 Content-Type: application/json;charset=UTF-8"/>
+      </port>
+      <!-- filtered port — should be skipped -->
+      <port protocol="tcp" portid="3389">
+        <state state="filtered" reason="no-response" reason_ttl="0"/>
+        <service name="ms-wbt-server" method="table" conf="3"/>
+      </port>
+    </ports>
+  </host>
+
+  <!-- Host 3: Windows host, RDP, SMB, and an unidentified port -->
+  <host starttime="1745510601" endtime="1745510650">
+    <status state="up" reason="echo-reply" reason_ttl="64"/>
+    <address addr="192.168.1.30" addrtype="ipv4"/>
+    <hostnames>
+      <hostname name="rdpserver.local" type="PTR"/>
+    </hostnames>
+    <ports>
+      <port protocol="tcp" portid="3389">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="ms-wbt-server" product="Microsoft Terminal Services" version="" ostype="Windows" extrainfo="" method="probed" conf="10"/>
+      </port>
+      <!-- SMB: has name and ostype+extrainfo but no product -->
+      <port protocol="tcp" portid="445">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="microsoft-ds" product="" version="" ostype="Windows" extrainfo="Windows Server 2019 Datacenter 17763" method="probed" conf="10"/>
+      </port>
+      <!-- Unknown service: no service element at all -->
+      <port protocol="tcp" portid="1337">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+      </port>
+    </ports>
+  </host>
+
+  <runstats>
+    <finished time="1745510700" timestr="Thu Apr 24 16:05:00 2026" summary="Nmap done at Thu Apr 24 16:05:00 2026; 256 IP addresses (3 hosts up) scanned in 300.00 seconds" elapsed="300.00" exit="success"/>
+    <hosts up="3" down="253" total="256"/>
+  </runstats>
+</nmaprun>

@@ -51,3 +51,4 @@ nuclei -u https://target.com -j | python nuclei_to_bare.py | bare
 | Adapter | Source | Language | Location |
 |---------|--------|----------|----------|
 | nuclei  | [Nuclei](https://github.com/projectdiscovery/nuclei) JSONL | Python | `adapters/nuclei/` |
+| nmap    | [nmap](https://nmap.org/) XML (`-oX`) | Python | `adapters/nmap/` |
