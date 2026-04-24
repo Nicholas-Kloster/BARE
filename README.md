@@ -155,7 +155,7 @@ Writing a new adapter: see adapters/README.md for the pattern and contract.
 
 ## Current Status
 
-A single binary (~18MB on Linux x86_64):
+A single binary (~101MB on Linux x86_64 — includes BERT encoder, tokenizer, and 3,904-module Metasploit corpus):
 
 - Embedded BERT encoder (sentence-transformers/all-MiniLM-L6-v2)
 - Embedded corpus of 3,904 pre-encoded Metasploit module descriptions
