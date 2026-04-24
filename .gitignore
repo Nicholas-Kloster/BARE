@@ -2,3 +2,5 @@ target/
 __pycache__/
 *.pyc
 .env
+modules_50.json
+modules_250.json

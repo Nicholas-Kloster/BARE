@@ -1,29 +1,47 @@
 """
 serialize.py
 ────────────
-Encodes a hardcoded corpus and writes corpus.bin per FORMAT.md.
+Encodes a corpus and writes corpus.bin per FORMAT.md.
+
+Now reads from modules_50.json (50 real Metasploit modules).
+Encode field: name + " " + description (concatenated for richer signal).
 
 Usage:
     python serialize.py
+
+# ── Original hardcoded 5-record corpus (kept for reference) ──────────────────
+# CORPUS = [
+#     ("ollama_rce",
+#      "Unauthenticated Ollama API exploit via /api/generate endpoint for model inference theft and malicious model injection"),
+#     ("jupyter_rce",
+#      "Jupyter notebook unauthenticated kernel API allowing arbitrary Python code execution via /api/kernels"),
+#     ("flowise_creds",
+#      "Flowise credentials dump from /api/v1/credentials exposing OpenAI and Anthropic API keys stored in agent flows"),
+#     ("chromadb_dump",
+#      "ChromaDB collection enumeration revealing PII vectors and customer records from unauthenticated instance"),
+#     ("mlflow_traversal",
+#      "MLflow artifact path traversal for reading arbitrary files from model server filesystem"),
+# ]
+# ─────────────────────────────────────────────────────────────────────────────
 """
 
+import json
 import struct
 from sentence_transformers import SentenceTransformer
 
 DIMS = 384
 VERSION = 0x01
 
+import sys
+INFILE = sys.argv[1] if len(sys.argv) > 1 else "modules_250.json"
+
+with open(INFILE) as f:
+    modules = json.load(f)
+
+# (id, encode_text) pairs — name prepended to description for richer signal
 CORPUS = [
-    ("ollama_rce",
-     "Unauthenticated Ollama API exploit via /api/generate endpoint for model inference theft and malicious model injection"),
-    ("jupyter_rce",
-     "Jupyter notebook unauthenticated kernel API allowing arbitrary Python code execution via /api/kernels"),
-    ("flowise_creds",
-     "Flowise credentials dump from /api/v1/credentials exposing OpenAI and Anthropic API keys stored in agent flows"),
-    ("chromadb_dump",
-     "ChromaDB collection enumeration revealing PII vectors and customer records from unauthenticated instance"),
-    ("mlflow_traversal",
-     "MLflow artifact path traversal for reading arbitrary files from model server filesystem"),
+    (m["id"], m["name"] + " " + m["description"])
+    for m in modules
 ]
 
 print("[*] Loading model...")

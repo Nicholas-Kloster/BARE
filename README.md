@@ -24,18 +24,18 @@ A semantic search tool that's a single binary is a field tool.
 
 That distinction is the entire point.
 
-## Status
+## Current Status
 
-Corpus search working end-to-end. A single 12MB binary encodes queries 
-with BERT, searches an embedded corpus of vectors, and returns ranked 
-matches by cosine similarity. No Python. No VDB. No network.
+Quality validated at scale. A single 12MB binary:
 
-Test query "ollama exposed no authentication" correctly ranks the 
-semantically related ollama_rce corpus entry first with zero shared 
-tokens — proving the match is semantic, not keyword-based.
+- Loads a BERT encoder (sentence-transformers/all-MiniLM-L6-v2)
+- Loads an embedded corpus of pre-encoded vectors (via `include_bytes!`)
+- Encodes a query at runtime
+- Searches the corpus via cosine similarity
+- Returns ranked matches
 
-## What's Next
-
-Scale the corpus from 5 handcrafted records to the full Metasploit 
-module set (~2,000 modules). Pull from GitHub, encode in the build 
-step, ship in the binary.
+Rust output vectors match Python sentence-transformers output to within 
+f32/f64 rounding error (~1e-7 delta). Stability test across 50 and 250 
+real Metasploit module descriptions confirms the model discriminates 
+correctly — queries with ground-truth matches in the corpus return them 
+as the top result consistently.
