@@ -154,7 +154,7 @@ Instead, BARE speaks a single universal input format: `findings.json`, documente
 ```
 nuclei -----+
 nmap -------|
-aimap ------+--> adapter --> findings.json --> bare --> ranked modules
+shodan -----+--> adapter --> findings.json --> bare --> ranked modules
 trivy ------|
 your tool --+
 ```
@@ -165,6 +165,7 @@ Currently shipped adapters:
 
 - `adapters/nuclei/` — nuclei JSONL to BARE findings.json
 - `adapters/nmap/` — nmap XML with NSE script output to BARE findings.json
+- `adapters/shodan/` — Shodan JSONL (`shodan download`) to BARE findings.json
 
 Writing a new adapter: see [adapters/README.md](adapters/README.md) for the pattern and contract.
 
@@ -195,7 +196,7 @@ A future variant may support an external `corpus.bin` loaded from disk at runtim
 
 ## What's Next
 
-- More adapters (Trivy, Semgrep, aimap)
+- More adapters (Trivy, Semgrep, aimap, more)
 - Category-aware ranking for scanner vs exploit prioritization
 - External hash-pinned corpus mode for non-SCIF deployments
 - Domain-specific encoder fine-tune (Metasploit + Exploit-DB + nuclei templates)
