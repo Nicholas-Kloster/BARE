@@ -100,6 +100,18 @@ jobs:
       - name: "[shodan] Validate output.json against output schema"
         run: ajv validate -s schemas/output.schema.json -d /tmp/shodan_output.json
 
+      - name: Install sentence-transformers for parity check
+        run: pip install --quiet sentence-transformers
+
+      - name: "[parity] Encode same query in Python and Rust"
+        run: |
+          QUERY="unauthenticated remote code execution in apache struts via OGNL injection"
+          echo "$QUERY" | python tools/encode_baseline.py > /tmp/python.vec
+          echo "$QUERY" | target/release/bare --encode > /tmp/rust.vec
+
+      - name: "[parity] Assert encoders agree element-wise"
+        run: python tools/parity_check.py /tmp/python.vec /tmp/rust.vec --threshold 1e-5
+
       - name: Summary
         run: |
           for adapter in nuclei nmap shodan; do

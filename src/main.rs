@@ -31,6 +31,9 @@ USAGE:
 OPTIONS:
     --top <N>    Number of top matches to return per finding (default: 3,
                  capped to corpus size).
+    --encode     Read text from stdin, print L2-normalized 384-dim vector
+                 to stdout (space-separated). Used for parity testing
+                 against Python sentence-transformers.
     --version    Print version banner and exit.
     --help       Print this help and exit.
 
@@ -96,6 +99,7 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let mut top_k: usize = 3;
     let mut input_path: Option<String> = None;
+    let mut encode_only = false;
     let mut i = 1;
 
     while i < args.len() {
@@ -120,6 +124,9 @@ fn main() -> Result<()> {
                     return Err(anyhow!("--top must be >= 1"));
                 }
             }
+            "--encode" => {
+                encode_only = true;
+            }
             "-" => {
                 // Explicit stdin marker — leave input_path as None
             }
@@ -132,6 +139,32 @@ fn main() -> Result<()> {
             }
         }
         i += 1;
+    }
+
+    // ── Encode-only mode (parity testing) ─────────────────────────────────────
+    // Reads text from stdin, prints space-separated f32 vector to stdout.
+    // Used by the CI parity check to compare against Python sentence-transformers.
+    if encode_only {
+        let device = Device::Cpu;
+        let tokenizer = Tokenizer::from_bytes(TOKENIZER_BYTES)
+            .map_err(|e| anyhow!("tokenizer load failed: {}", e))?;
+        let config: Config = serde_json::from_slice(CONFIG_BYTES)?;
+        let vb = VarBuilder::from_buffered_safetensors(WEIGHTS_BYTES.to_vec(), DTYPE, &device)?;
+        let model = BertModel::load(vb, &config)?;
+
+        let mut text = String::new();
+        std::io::stdin()
+            .read_to_string(&mut text)
+            .context("reading stdin failed")?;
+        let text = text.trim();
+        if text.is_empty() {
+            return Err(anyhow!("--encode requires non-empty text on stdin"));
+        }
+
+        let vec = encode_text(text, &tokenizer, &model, &device)?;
+        let line: Vec<String> = vec.iter().map(|x| format!("{:.10}", x)).collect();
+        println!("{}", line.join(" "));
+        return Ok(());
     }
 
     // ── Read input ────────────────────────────────────────────────────────────
