@@ -1,4 +1,3 @@
-```text
     ____  ___    ____  ______
    / __ )/   |  / __ \/ ____/
   / __  / /| | / /_/ / __/
@@ -6,7 +5,6 @@
 /_____/_/  |_/_/ |_/_____/
 
                            by NuClide
-```
 
 # BARE
 
@@ -169,6 +167,43 @@ Currently shipped adapters:
 
 Writing a new adapter: see [adapters/README.md](adapters/README.md) for the pattern and contract.
 
+## Schema Validation
+
+Both input and output formats have machine-readable JSON schemas in `schemas/`:
+
+- `schemas/input.schema.json` — validates `findings.json` before BARE processes it
+- `schemas/output.schema.json` — validates BARE's ranked output
+
+The CI pipeline runs schema checks via `ajv-cli` against sample data from each adapter. If you are building a new adapter, validate against `input.schema.json` before running BARE. If you are building a consumer of BARE output, validate against `output.schema.json`.
+
+## Corpus Generation
+
+The corpus baked into the binary was generated in two steps. If you want to rebuild it from a fresh Metasploit snapshot:
+
+```
+# Step 1: fetch all Metasploit module descriptions from GitHub
+python fetch_modules.py
+
+# Step 2: encode descriptions into 384-dim vectors and write corpus.bin
+python serialize.py
+
+# Step 3: rebuild the binary with the new corpus embedded
+cargo build --release
+```
+
+`fetch_modules.py` concurrently scrapes the Metasploit framework repository via the GitHub API. `serialize.py` loads `sentence-transformers/all-MiniLM-L6-v2`, encodes each module description, and writes the result as a little-endian binary in the format documented in [FORMAT.md](FORMAT.md).
+
+This step requires Python with `sentence-transformers` installed. Only necessary if you are updating the corpus. End users running a pre-built binary or building from a repo clone with the existing `corpus.bin` do not need Python at all.
+
+## Parity Validation
+
+The Rust encoder must produce vectors that match the Python reference implementation before the binary is trusted. The tools for this live in `tools/`:
+
+- `tools/encode_baseline.py` — generates reference vectors from Python sentence-transformers for a fixed set of inputs
+- `tools/parity_check.py` — runs the same inputs through the Rust binary and compares element-wise, asserting agreement within 1e-5
+
+The CI pipeline runs `parity_check.py` on every build. The threshold is tighter in practice (~1e-7 on most inputs); 1e-5 is the floor that accounts for f32/f64 rounding in edge cases. If parity fails, the build fails.
+
 ## Current Status
 
 Single binary (~101MB on Linux x86_64) containing:
@@ -213,6 +248,7 @@ The binary is produced at `target/release/bare`. Everything it needs (BERT weigh
 To regenerate the corpus from a newer Metasploit module set:
 
 ```
+python fetch_modules.py
 python serialize.py
 cargo build --release
 ```
