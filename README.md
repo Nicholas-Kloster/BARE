@@ -357,3 +357,14 @@ cargo build --release
 ```
 
 This requires `sentence-transformers` installed in Python. Only needed if you are updating the corpus. End users who just want to run BARE do not need any Python dependencies.
+
+## License
+
+Dual-licensed under either of:
+
+- MIT License ([LICENSE-MIT](LICENSE-MIT))
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+
+at your option. This is the standard Rust ecosystem dual license. Pick whichever fits your context — the MIT license for simplicity, or Apache-2.0 if you want the explicit patent grant.
+
+The embedded model weights (`sentence-transformers/all-MiniLM-L6-v2`) are Apache-2.0. The Metasploit module descriptions used to build the corpus are BSD-3-Clause (Rapid7). Both are compatible with this dual license.
