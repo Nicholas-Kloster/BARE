@@ -159,13 +159,82 @@ your tool --+
 
 BARE's output is also structured, documented in [OUTPUT_FORMAT.md](OUTPUT_FORMAT.md), so downstream tools can consume it cleanly.
 
-Currently shipped adapters:
-
-- `adapters/nuclei/` — nuclei JSONL to BARE findings.json
-- `adapters/nmap/` — nmap XML with NSE script output to BARE findings.json
-- `adapters/shodan/` — Shodan JSONL (`shodan download`) to BARE findings.json
-
 Writing a new adapter: see [adapters/README.md](adapters/README.md) for the pattern and contract.
+
+### nuclei
+
+Converts nuclei JSONL output (`-j` flag) to `findings.json`. One finding per nuclei result.
+
+```sh
+nuclei -u https://target.com -j | python adapters/nuclei/nuclei_to_bare.py | bare --top 5
+python adapters/nuclei/nuclei_to_bare.py scan.jsonl | bare
+```
+
+The adapter builds a rich description from multiple nuclei fields — name, description, CVE/CWE IDs, matched value, extracted results, and tags — to maximize embedding surface. A finding with only `info.name` and `info.description` still works; those two alone provide enough signal for most queries.
+
+| findings.json field | Source |
+|---------------------|--------|
+| `id` | `template-id`, fallback to slugified `info.name` |
+| `title` | `info.name` |
+| `description` | name + description + CVE/CWE IDs + matcher + extracted results + tags |
+| `target` | `matched-at`, fallback to `host` |
+| `severity` | `info.severity` (normalized lowercase) |
+| `metadata` | all remaining nuclei fields (classification, references, request/response) |
+
+Known limitations: `info.severity` value `unknown` is dropped. Extracted results capped at 3 entries × 200 chars; full results in `metadata`. Request/response bodies capped at 1000/500 bytes.
+
+Full docs: [adapters/nuclei/README.md](adapters/nuclei/README.md)
+
+### nmap
+
+Converts nmap XML output (`-oX`) to `findings.json`. One finding per open port. Closed and filtered ports are not emitted.
+
+```sh
+nmap -sV -oX - target.com | python adapters/nmap/nmap_to_bare.py | bare --top 5
+python adapters/nmap/nmap_to_bare.py scan.xml | bare
+```
+
+Run nmap with `-sV` (version detection). Without it, most service elements will be empty and BARE's matches will be less precise. The description is built from service name, product, version, OS type, and extra info — if nmap could not identify the service at all, the description falls back to `"open {protocol} port {portid}"`.
+
+| findings.json field | Source |
+|---------------------|--------|
+| `id` | `"{protocol}_{portid}_{host_address}"` |
+| `title` | `service/@name` + `service/@product` |
+| `description` | name + product + version + ostype + extrainfo |
+| `target` | `"{host_address}:{portid}/{protocol}"` |
+| `severity` | not emitted — nmap produces no severity data |
+| `metadata` | NSE script id + output for scripts on the port |
+
+Known limitations: nmap reports running services, not confirmed vulnerabilities — scores will typically be lower than nuclei output. NSE script output is preserved in `metadata.scripts` but not included in the description (adding it buries the core service signal).
+
+Full docs: [adapters/nmap/README.md](adapters/nmap/README.md)
+
+### shodan
+
+Converts Shodan JSONL bulk export (`shodan download`) to `findings.json`. One finding per banner record.
+
+```sh
+shodan download --limit 1000 results 'apache country:US'
+gunzip results.json.gz
+cat results.json | python adapters/shodan/shodan_to_bare.py | bare --top 5
+```
+
+The adapter does not call the Shodan API — data collection is the user's responsibility. The description is assembled from product, version, raw banner data, HTTP server header, TLS CN, CPE identifiers, Shodan tags, and CVE IDs. Severity is derived from the highest CVSS score across all reported CVEs.
+
+| findings.json field | Source |
+|---------------------|--------|
+| `id` | `"{ip}_{port}_{transport}"` |
+| `title` | `product`, fallback to `http.title` → `cpe23[0]` → `"port N/proto"` |
+| `description` | product + version + banner + HTTP server + TLS CN + tags + CPEs + CVE IDs |
+| `target` | `"{ip}:{port}/{transport}"` |
+| `severity` | max CVSS across `vulns` dict (≥9.0 critical, ≥7.0 high, ≥4.0 medium, <4.0 low) |
+| `metadata` | org, hostnames, location, Shodan scan metadata, full `vulns` dict |
+
+CVE list in description is capped at top-10 by CVSS. Full `vulns` dict is always in `metadata.vulns`. Raw banner truncated at 500 chars.
+
+Known limitations: Shodan data is not real-time — banners may be weeks old. CVE attribution is based on version string matching, not active exploitation; treat findings as leads, not confirmed vulnerabilities. No host-level aggregation — multiple open ports on one host appear as separate findings.
+
+Full docs: [adapters/shodan/README.md](adapters/shodan/README.md)
 
 ## Schema Validation
 
