@@ -19,6 +19,35 @@ const BANNER: &str = r#"
                            by NuClide
 "#;
 
+const HELP: &str = r#"BARE — Binary Anywhere Rust Encoder
+
+Semantic search for security scanner findings against an embedded
+Metasploit corpus. Reads findings.json (BARE input schema v1) on
+stdin or from a file, emits ranked module matches as JSON on stdout.
+
+USAGE:
+    bare [OPTIONS] [INPUT_PATH]
+
+OPTIONS:
+    --top <N>    Number of top matches to return per finding (default: 3,
+                 capped to corpus size).
+    --version    Print version banner and exit.
+    --help       Print this help and exit.
+
+INPUT:
+    INPUT_PATH may be a path to a findings.json file, or "-" / omitted
+    to read from stdin. See INPUT_FORMAT.md for the full schema.
+
+OUTPUT:
+    Pretty-printed JSON document on stdout. See OUTPUT_FORMAT.md.
+    Status messages and warnings are written to stderr.
+
+EXAMPLES:
+    nuclei -u https://target -j | python adapters/nuclei/nuclei_to_bare.py | bare
+    bare --top 5 findings.json
+    bare < findings.json
+"#;
+
 use anyhow::{anyhow, Context, Result};
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
@@ -71,9 +100,13 @@ fn main() -> Result<()> {
 
     while i < args.len() {
         match args[i].as_str() {
-            "--version" => {
+            "--version" | "-V" => {
                 let banner = BANNER.replace("{VERSION}", env!("CARGO_PKG_VERSION"));
                 eprintln!("{}", banner);
+                return Ok(());
+            }
+            "--help" | "-h" => {
+                println!("{}", HELP);
                 return Ok(());
             }
             "--top" => {
@@ -83,12 +116,18 @@ fn main() -> Result<()> {
                     .ok_or_else(|| anyhow!("--top requires an argument"))?
                     .parse::<usize>()
                     .context("--top value must be a positive integer")?;
+                if top_k == 0 {
+                    return Err(anyhow!("--top must be >= 1"));
+                }
+            }
+            "-" => {
+                // Explicit stdin marker — leave input_path as None
             }
             arg if !arg.starts_with('-') => {
                 input_path = Some(arg.to_string());
             }
             arg => {
-                eprintln!("bare: unknown flag: {}", arg);
+                eprintln!("bare: unknown flag: {}\n\nRun 'bare --help' for usage.", arg);
                 std::process::exit(1);
             }
         }
@@ -126,6 +165,15 @@ fn main() -> Result<()> {
     // ── Load embedded corpus ──────────────────────────────────────────────────
     let records = corpus::load_corpus(CORPUS_BYTES)?;
     eprintln!("[+] Corpus: {} records", records.len());
+
+    if top_k > records.len() {
+        eprintln!(
+            "[warn] --top {} exceeds corpus size {}, capping",
+            top_k,
+            records.len()
+        );
+        top_k = records.len();
+    }
 
     let sha256 = corpus_sha256();
 
