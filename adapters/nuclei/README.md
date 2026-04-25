@@ -45,7 +45,7 @@ A finding with all fields produces a description with ~8 sentences of semantic s
 
 ## Examples
 
-Input (`nuclei_sample.jsonl`) and output (`bare_output.json`) are in the `examples/` directory.
+Input (`nuclei_sample.jsonl`) and adapter output (`findings.json` — conforms to BARE input schema) are in the `examples/` directory.
 
 ```sh
 python nuclei_to_bare.py examples/nuclei_sample.jsonl

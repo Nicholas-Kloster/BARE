@@ -62,7 +62,7 @@ Requires nmap to be run with version detection (`-sV`) to get useful `product` a
 
 Input and output examples are in the `examples/` directory:
 - `nmap_sample.xml` — 3 hosts, 11 open ports across HTTP/SSH/DB/RDP/SMB
-- `bare_output.json` — adapter output, valid against `schemas/input.schema.json`
+- `findings.json` — adapter output, valid against `schemas/input.schema.json` (this is BARE's *input*, not its output)
 
 ```sh
 python nmap_to_bare.py examples/nmap_sample.xml
