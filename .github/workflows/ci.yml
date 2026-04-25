@@ -49,6 +49,9 @@ jobs:
             https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/model.safetensors
           ls -lh assets/
 
+      - name: Run Rust unit tests
+        run: cargo test --release
+
       - name: Build BARE
         run: cargo build --release
 
