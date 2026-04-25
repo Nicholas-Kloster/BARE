@@ -51,7 +51,7 @@ sha256sum -c bare-linux-x86_64.sha256
 chmod +x bare-linux-x86_64
 ```
 
-The binary contains everything. BERT encoder, tokenizer, full Metasploit corpus. No Rust toolchain required.
+The binary contains everything. BERT encoder, tokenizer, and 3,904 pre-encoded Metasploit exploit and auxiliary module descriptions. No Rust toolchain required.
 
 ## Quick Start
 
@@ -60,8 +60,12 @@ To build from source instead (requires Rust 1.70+):
 ```
 git clone https://github.com/Nicholas-Kloster/BARE
 cd BARE
+curl -L -o assets/model.safetensors \
+  https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/model.safetensors
 cargo build --release
 ```
+
+The model weights (`assets/model.safetensors`, ~87MB) are gitignored due to size and must be fetched before the first build. The build embeds them into the binary via `include_bytes!` — once the binary is built, no network access is required.
 
 Try it against the bundled example:
 
@@ -94,6 +98,24 @@ You should see output like (truncated):
 ```
 
 Each finding produces a ranked list of the most semantically similar modules from the embedded Metasploit corpus.
+
+## Usage
+
+```
+bare [OPTIONS] [INPUT_PATH]
+
+OPTIONS:
+    --top <N>    Number of top matches per finding (default: 3, capped to corpus size)
+    --encode     Read text from stdin, print L2-normalized 384-dim vector to stdout
+                 (used by the parity check — see Parity Validation below)
+    --version    Print version banner and exit
+    --help       Print help and exit
+
+INPUT:
+    INPUT_PATH may be a path to a findings.json file, or "-" / omitted to read stdin.
+```
+
+Status messages and warnings are written to stderr. The output JSON document is the only thing on stdout, so piping into another tool is safe.
 
 ## Why This Matters
 
@@ -139,7 +161,7 @@ Memory safety plus parity validation is the deployment promise. Not "if it compi
                                   +--------------+
 ```
 
-At build time, a Python script encodes a text corpus (currently the full Metasploit module set) into a flat binary file. That file is compiled directly into the Rust binary via `include_bytes!`. The BERT model weights are embedded the same way.
+At build time, a Python script encodes a text corpus (currently 3,904 Metasploit exploit and auxiliary module descriptions) into a flat binary file. That file is compiled directly into the Rust binary via `include_bytes!`. The BERT model weights are embedded the same way.
 
 At runtime, BARE reads findings from stdin or a file, encodes each description with the embedded BERT model, and searches the baked-in corpus via cosine similarity. The output is structured JSON. One ranked list of modules per input finding.
 
@@ -260,18 +282,28 @@ python serialize.py
 cargo build --release
 ```
 
-`fetch_modules.py` concurrently scrapes the Metasploit framework repository via the GitHub API. `serialize.py` loads `sentence-transformers/all-MiniLM-L6-v2`, encodes each module description, and writes the result as a little-endian binary in the format documented in [FORMAT.md](FORMAT.md).
+`fetch_modules.py` scrapes the Metasploit framework repository via the GitHub Trees API and concurrently downloads each `.rb` file to extract the module name and description. The unauthenticated GitHub API has a 60-requests-per-hour rate limit, which the scraper will exhaust well before fetching the full module tree. Set `GITHUB_TOKEN` in the environment, or have `gh auth login` configured — the scraper picks either up automatically.
+
+The scraper currently targets `modules/exploits/` and `modules/auxiliary/`. `post`, `payloads`, `encoders`, `nops`, and `evasion` modules are not included in the shipped corpus. The current corpus contains 2,647 exploits and 1,257 auxiliary modules.
+
+`serialize.py` reads `modules_full.json` (the scraper's output), loads `sentence-transformers/all-MiniLM-L6-v2`, encodes each module's `name + " " + description`, and writes the result as a little-endian binary in the format documented in [FORMAT.md](FORMAT.md).
 
 This step requires Python with `sentence-transformers` installed. Only necessary if you are updating the corpus. End users running a pre-built binary or building from a repo clone with the existing `corpus.bin` do not need Python at all.
 
 ## Parity Validation
 
-The Rust encoder must produce vectors that match the Python reference implementation before the binary is trusted. The tools for this live in `tools/`:
+The Rust encoder must produce vectors that match the Python reference implementation before the binary is trusted. The Rust binary exposes its raw encoder via `bare --encode`, which reads text from stdin and prints the L2-normalized 384-dim vector to stdout — the same shape as `tools/encode_baseline.py`.
 
-- `tools/encode_baseline.py` — generates reference vectors from Python sentence-transformers for a fixed set of inputs
-- `tools/parity_check.py` — runs the same inputs through the Rust binary and compares element-wise, asserting agreement within 1e-5
+The CI pipeline runs the same query through both encoders and asserts element-wise agreement:
 
-The CI pipeline runs `parity_check.py` on every build. The threshold is tighter in practice (~1e-7 on most inputs); 1e-5 is the floor that accounts for f32/f64 rounding in edge cases. If parity fails, the build fails.
+```
+QUERY="unauthenticated remote code execution in apache struts via OGNL injection"
+echo "$QUERY" | python tools/encode_baseline.py > python.vec
+echo "$QUERY" | bare --encode > rust.vec
+python tools/parity_check.py python.vec rust.vec --threshold 1e-5
+```
+
+The threshold is tighter in practice (~1e-7 on most inputs); 1e-5 is the floor that accounts for f32/f64 rounding in edge cases. If `parity_check.py` finds any element-wise delta above the threshold, it prints the top-5 worst offenders and exits non-zero. The CI build fails on parity mismatch.
 
 ## Current Status
 
@@ -279,12 +311,12 @@ Single binary (~101MB on Linux x86_64) containing:
 
 - Embedded BERT encoder weights (sentence-transformers/all-MiniLM-L6-v2)
 - Embedded tokenizer
-- Embedded corpus of 3,904 pre-encoded Metasploit module descriptions
+- Embedded corpus of 3,904 pre-encoded Metasploit module descriptions (2,647 exploits + 1,257 auxiliary)
 - Search logic and output schema enforcement
 
 Reads `findings.json` from stdin or file. Emits structured ranked output per OUTPUT_FORMAT.md.
 
-Rust output vectors match Python sentence-transformers output to within f32/f64 rounding error (~1e-7 delta). Tested across five distinct Metasploit module categories. Discrimination is semantic, not keyword-based.
+Rust output vectors match Python sentence-transformers output to within f32/f64 rounding error (~1e-7 delta), enforced as a hard CI gate via `bare --encode` against `tools/encode_baseline.py`. Discrimination is semantic, not keyword-based.
 
 ### Known Ranking Behavior
 
@@ -308,6 +340,8 @@ A future variant may support an external `corpus.bin` loaded from disk at runtim
 
 ## Build From Source
 
+Prerequisites: Rust 1.70+ (stable toolchain), and `assets/model.safetensors` in place (gitignored, fetch once — see Quick Start above).
+
 ```
 cargo build --release
 ```
@@ -322,4 +356,4 @@ python serialize.py
 cargo build --release
 ```
 
-This requires sentence-transformers installed in Python. Only needed if you are updating the corpus. End users who just want to run BARE do not need any Python dependencies.
+This requires `sentence-transformers` installed in Python. Only needed if you are updating the corpus. End users who just want to run BARE do not need any Python dependencies.
