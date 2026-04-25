@@ -26,6 +26,23 @@ __version__ = "1.0.0"
 SOURCE = "shodan"
 
 BANNER_MAX = 500
+# Cap CVEs included in the description. Shodan often reports 50-100+ CVEs per
+# stale-Apache banner; embedding all of them blows past MiniLM's 512-token
+# budget and drowns out the actual service signal. Top-N by CVSS preserves
+# the high-severity discriminators; full vulns dict still lives in metadata.
+CVE_DESC_MAX = 10
+
+
+def _max_cvss(info: Any) -> float:
+    """Return the highest CVSS score across cvss/cvss_v2/cvss_v3 fields, or 0.0."""
+    if not isinstance(info, dict):
+        return 0.0
+    score = 0.0
+    for field in ("cvss", "cvss_v2", "cvss_v3"):
+        v = info.get(field)
+        if isinstance(v, (int, float)):
+            score = max(score, float(v))
+    return score
 
 
 def severity_from_vulns(vulns: dict[str, Any]) -> str | None:
@@ -41,14 +58,7 @@ def severity_from_vulns(vulns: dict[str, Any]) -> str | None:
     if not vulns:
         return None
 
-    max_cvss = 0.0
-    for info in vulns.values():
-        if not isinstance(info, dict):
-            continue
-        for field in ("cvss", "cvss_v2", "cvss_v3"):
-            score = info.get(field)
-            if isinstance(score, (int, float)):
-                max_cvss = max(max_cvss, float(score))
+    max_cvss = max((_max_cvss(info) for info in vulns.values()), default=0.0)
 
     if max_cvss == 0.0:
         return None
@@ -141,7 +151,17 @@ def build_description(record: dict[str, Any]) -> str:
 
     vulns = record.get("vulns") or {}
     if isinstance(vulns, dict) and vulns:
-        parts.append(", ".join(sorted(vulns.keys())))
+        ranked = sorted(
+            vulns.items(),
+            key=lambda kv: _max_cvss(kv[1]),
+            reverse=True,
+        )
+        top = [cve_id for cve_id, _ in ranked[:CVE_DESC_MAX]]
+        overflow = len(vulns) - len(top)
+        cve_str = ", ".join(top)
+        if overflow > 0:
+            cve_str += f" (+{overflow} more in metadata)"
+        parts.append(cve_str)
 
     if not parts:
         return f"open {port}/{transport} on {ip_str}"

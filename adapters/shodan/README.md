@@ -95,3 +95,5 @@ Shodan marks most findings as `verified: false` — CVE detection is based on ba
 **One finding per banner record.** If a host has multiple open ports, each appears as a separate finding. BARE ranks them independently — there is no host-level aggregation.
 
 **Banner truncation.** Raw banner data (`data` field) is truncated at 500 characters to keep descriptions at a reasonable embedding length. Full banner content is not preserved in `metadata`.
+
+**CVE list capping.** Shodan often reports 50–100+ CVEs for a single stale-Apache or stale-OpenSSL banner. Embedding all of them blows past MiniLM's 512-token budget — the trailing CVEs get silently truncated and the actual service signal gets buried. The adapter caps the description at the top 10 CVEs by max CVSS, with a `(+N more in metadata)` suffix when truncated. The full `vulns` dict is always preserved in `metadata.vulns` for downstream consumers.
