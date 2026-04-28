@@ -1,10 +1,13 @@
+```text
     ____  ___    ____  ______
    / __ )/   |  / __ \/ ____/
   / __  / /| | / /_/ / __/
  / /_/ / ___ |/ _, _/ /___
 /_____/_/  |_/_/ |_/_____/
 
-                           by NuClide
+          Offline Semantic Exploit Mapping
+          Single-binary BERT encoder for air-gapped vulnerability ranking.
+```
 
 # BARE
 
