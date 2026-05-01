@@ -372,6 +372,20 @@ cargo build --release
 
 This requires `sentence-transformers` installed in Python. Only needed if you are updating the corpus. End users who just want to run BARE do not need any Python dependencies.
 
+## Use with Claude Code
+
+Claude Code can pipe scanner output through BARE adapters and interpret the ranked Metasploit module list against your specific target context.
+
+```
+I've run `nuclei -u https://target.com -j | python adapters/nuclei/nuclei_to_bare.py | ./bare --top 5 > bare_results.json`. Read bare_results.json and for each finding tell me: which Metasploit module is the best match, what the module does, and whether it's likely exploitable given a public-facing web server with no WAF.
+```
+
+```
+Run `nmap -sV -oX scan.xml target.com && python adapters/nmap/nmap_to_bare.py scan.xml | ./bare --top 3 > bare_out.json`, then analyze bare_out.json — identify any module matches with score above 0.7, explain the attack surface they represent, and suggest which to prioritize.
+```
+
+---
+
 ## License
 
 Dual-licensed under either of:
