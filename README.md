@@ -396,3 +396,11 @@ Dual-licensed under either of:
 at your option. This is the standard Rust ecosystem dual license. Pick whichever fits your context — the MIT license for simplicity, or Apache-2.0 if you want the explicit patent grant.
 
 The embedded model weights (`sentence-transformers/all-MiniLM-L6-v2`) are Apache-2.0. The Metasploit module descriptions used to build the corpus are BSD-3-Clause (Rapid7). Both are compatible with this dual license.
+
+---
+
+## About
+
+Maintained by **[Nicholas Michael Kloster](https://github.com/Nicholas-Kloster)** as part of [**NuClide**](https://nuclide-research.com) — independent AI infrastructure security research.
+
+CISA disclosures: [CVE-2025-4364](https://nvd.nist.gov/vuln/detail/CVE-2025-4364) · [ICSA-25-140-11](https://www.cisa.gov/news-events/ics-advisories/icsa-25-140-11)
