@@ -29,19 +29,28 @@ USAGE:
     bare [OPTIONS] [INPUT_PATH]
 
 OPTIONS:
-    --top <N>           Number of top matches to return per finding (default: 3,
-                        capped to corpus size).
-    --min-score <FLOAT> Suppress matches with cosine similarity below this
-                        threshold. Default: 0.0 (no filtering). Useful values:
-                        0.5 (high-confidence only), 0.4 (moderate), 0.3 (loose).
-                        Per the 2026-05-19 sub2api survey, max BARE score on a
-                        novel finding class was 0.539, so --min-score 0.5 cleanly
-                        separates "known module match" from "no precise coverage."
-    --encode            Read text from stdin, print L2-normalized 384-dim vector
-                        to stdout (space-separated). Used for parity testing
-                        against Python sentence-transformers.
-    --version           Print version banner and exit.
-    --help              Print this help and exit.
+    --top <N>                    Number of top matches to return per finding (default: 3,
+                                 capped to corpus size).
+    --min-score <FLOAT>          Suppress matches with cosine similarity below this
+                                 threshold. Default: 0.0 (no filtering). Useful values:
+                                 0.5 (high-confidence only), 0.4 (moderate), 0.3 (loose).
+                                 Per the 2026-05-19 sub2api survey, max BARE score on a
+                                 novel finding class was 0.539, so --min-score 0.5 cleanly
+                                 separates "known module match" from "no precise coverage."
+    --no-match-threshold <FLOAT> Sentinel threshold for corpus coverage gaps (default: 0.55).
+                                 When the top raw score for a finding falls below this value,
+                                 BARE clears the matches array and adds sentinel fields to
+                                 the finding: no_high_confidence_match: true, no_match_reason,
+                                 and top_score_seen. This signals that the msf corpus has no
+                                 meaningful coverage for this finding class (e.g., Open WebUI,
+                                 LiteLLM, Ollama) — the low-score matches would be noise, not
+                                 signal. Set to 0.0 to disable; set higher (0.6+) to be more
+                                 aggressive about flagging coverage gaps.
+    --encode                     Read text from stdin, print L2-normalized 384-dim vector
+                                 to stdout (space-separated). Used for parity testing
+                                 against Python sentence-transformers.
+    --version                    Print version banner and exit.
+    --help                       Print this help and exit.
 
 INPUT:
     INPUT_PATH may be a path to a findings.json file, or "-" / omitted
@@ -105,6 +114,7 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let mut top_k: usize = 3;
     let mut min_score: f32 = 0.0;
+    let mut no_match_threshold: f32 = 0.55;
     let mut input_path: Option<String> = None;
     let mut encode_only = false;
     let mut i = 1;
@@ -140,6 +150,17 @@ fn main() -> Result<()> {
                     .context("--min-score value must be a float (e.g. 0.5)")?;
                 if !(0.0..=1.0).contains(&min_score) {
                     return Err(anyhow!("--min-score must be in [0.0, 1.0]"));
+                }
+            }
+            "--no-match-threshold" => {
+                i += 1;
+                no_match_threshold = args
+                    .get(i)
+                    .ok_or_else(|| anyhow!("--no-match-threshold requires an argument"))?
+                    .parse::<f32>()
+                    .context("--no-match-threshold value must be a float (e.g. 0.55)")?;
+                if !(0.0..=1.0).contains(&no_match_threshold) {
+                    return Err(anyhow!("--no-match-threshold must be in [0.0, 1.0]"));
                 }
             }
             "--encode" => {
@@ -245,33 +266,54 @@ fn main() -> Result<()> {
 
         scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
-        let matches: Vec<output::Match> = scores
-            .iter()
-            .filter(|(_, s)| *s >= min_score)
-            .take(top_k)
-            .enumerate()
-            .map(|(idx, (name, score))| output::Match {
-                rank:     idx + 1,
-                module:   name.to_string(),
-                score:    *score,
-                category: category_from_module(name),
-            })
-            .collect();
-        if matches.is_empty() && min_score > 0.0 {
-            eprintln!(
-                "[*] No matches >= {:.2} for {} (top raw score: {:.3})",
-                min_score,
-                finding.id,
-                scores.first().map(|(_, s)| *s).unwrap_or(0.0)
-            );
-        }
+        let top_raw_score = scores.first().map(|(_, s)| *s).unwrap_or(0.0);
+
+        // ── no-match-threshold sentinel ───────────────────────────────────────
+        // If the top score in the entire corpus falls below the threshold,
+        // the msf corpus has no meaningful coverage for this finding class.
+        // Emit sentinel fields and clear matches rather than returning noise.
+        let (matches, no_high_confidence_match, no_match_reason, top_score_seen) =
+            if no_match_threshold > 0.0 && top_raw_score < no_match_threshold {
+                eprintln!(
+                    "[!] No corpus coverage for {} (top score {:.3} < threshold {:.2}) — msf corpus may not cover this finding class",
+                    finding.id, top_raw_score, no_match_threshold
+                );
+                let reason = format!(
+                    "top score {:.3} below threshold {:.2} — msf corpus may not cover this finding class (e.g., Open WebUI / LiteLLM / Ollama)",
+                    top_raw_score, no_match_threshold
+                );
+                (vec![], Some(true), Some(reason), Some(top_raw_score))
+            } else {
+                let m: Vec<output::Match> = scores
+                    .iter()
+                    .filter(|(_, s)| *s >= min_score)
+                    .take(top_k)
+                    .enumerate()
+                    .map(|(idx, (name, score))| output::Match {
+                        rank:     idx + 1,
+                        module:   name.to_string(),
+                        score:    *score,
+                        category: category_from_module(name),
+                    })
+                    .collect();
+                if m.is_empty() && min_score > 0.0 {
+                    eprintln!(
+                        "[*] No matches >= {:.2} for {} (top raw score: {:.3})",
+                        min_score, finding.id, top_raw_score
+                    );
+                }
+                (m, None, None, None)
+            };
 
         output_findings.push(output::OutputFinding {
-            id:       finding.id.clone(),
-            title:    finding.title.clone(),
-            target:   finding.target.clone(),
-            severity: finding.severity.clone(),
+            id:                    finding.id.clone(),
+            title:                 finding.title.clone(),
+            target:                finding.target.clone(),
+            severity:              finding.severity.clone(),
             matches,
+            no_high_confidence_match,
+            no_match_reason,
+            top_score_seen,
         });
     }
 

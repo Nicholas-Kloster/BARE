@@ -55,13 +55,18 @@ The `corpus` object exists so downstream tooling can verify which corpus produce
 
 ### Finding object
 
-| Field    | Required | Type   | Description                                                    |
-|----------|----------|--------|----------------------------------------------------------------|
-| id       | yes      | string | Echoed from input finding.                                     |
-| title    | yes      | string | Echoed from input finding.                                     |
-| target   | no       | string | Echoed from input finding if present.                          |
-| severity | no       | string | Echoed from input finding if present.                          |
-| matches  | yes      | array  | Ranked module matches. Always present, may be empty.           |
+| Field                    | Required | Type   | Description                                                                 |
+|--------------------------|----------|--------|-----------------------------------------------------------------------------|
+| id                       | yes      | string | Echoed from input finding.                                                  |
+| title                    | yes      | string | Echoed from input finding.                                                  |
+| target                   | no       | string | Echoed from input finding if present.                                       |
+| severity                 | no       | string | Echoed from input finding if present.                                       |
+| matches                  | yes      | array  | Ranked module matches. Always present; empty when sentinel fires.           |
+| no_high_confidence_match | no       | bool   | `true` when `--no-match-threshold` fires. Signals the corpus has no coverage for this finding class. |
+| no_match_reason          | no       | string | Human-readable explanation including top score seen and threshold applied.  |
+| top_score_seen           | no       | float  | Raw top cosine score from the corpus for this finding (even if below threshold). Useful for tuning. |
+
+**Sentinel fields** (`no_high_confidence_match`, `no_match_reason`, `top_score_seen`) are omitted from the JSON entirely when not triggered (`skip_serializing_if = "Option::is_none"`). When present, `matches` will always be an empty array — the sentinel replaces, not supplements, the matches. Downstream consumers should check for `no_high_confidence_match: true` before treating an empty `matches` array as "no exploits exist" vs "corpus doesn't cover this class."
 
 ### Match object
 
@@ -71,6 +76,17 @@ The `corpus` object exists so downstream tooling can verify which corpus produce
 | module   | yes      | string | Module identifier from the corpus.                              |
 | score    | yes      | float  | Cosine similarity, range 0.0 to 1.0. Higher is better match.    |
 | category | yes      | string | Module category (e.g. `exploits`, `auxiliary`, `post`).         |
+
+## Stream Contract
+
+BARE writes exactly two streams:
+
+| Stream | Content |
+|--------|---------|
+| **stdout** | The JSON output document. Nothing else. Parseable directly with `jq`, `python -m json.tool`, etc. |
+| **stderr** | Progress lines (`[1/3] Loading tokenizer...`), informational markers (`[*] Encoding: <id>`), warnings (`[warn]`), and error messages. Never mixed into stdout. |
+
+This split means the canonical pipeline — `bare < findings.json | jq .` — works without filtering. Shell redirection (`2>/dev/null`) suppresses all progress output for quiet operation.
 
 ## Design Decisions
 
