@@ -72,6 +72,17 @@ The `corpus` object exists so downstream tooling can verify which corpus produce
 | score    | yes      | float  | Cosine similarity, range 0.0 to 1.0. Higher is better match.    |
 | category | yes      | string | Module category (e.g. `exploits`, `auxiliary`, `post`).         |
 
+## Stream Contract
+
+BARE writes exactly two streams:
+
+| Stream | Content |
+|--------|---------|
+| **stdout** | The JSON output document. Nothing else. Parseable directly with `jq`, `python -m json.tool`, etc. |
+| **stderr** | Progress lines (`[1/3] Loading tokenizer...`), informational markers (`[*] Encoding: <id>`), warnings (`[warn]`), and error messages. Never mixed into stdout. |
+
+This split means the canonical pipeline — `bare < findings.json | jq .` — works without filtering. Shell redirection (`2>/dev/null`) suppresses all progress output for quiet operation.
+
 ## Design Decisions
 
 ### Why the output mirrors the input
