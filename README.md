@@ -114,17 +114,35 @@ Each finding produces a ranked list of the most semantically similar modules fro
 bare [OPTIONS] [INPUT_PATH]
 
 OPTIONS:
-    --top <N>    Number of top matches per finding (default: 3, capped to corpus size)
-    --encode     Read text from stdin, print L2-normalized 384-dim vector to stdout
-                 (used by the parity check — see Parity Validation below)
-    --version    Print version banner and exit
-    --help       Print help and exit
+    --top <N>           Number of top matches per finding (default: 3, capped to corpus size)
+    --min-score <FLOAT> Suppress matches with cosine similarity below this threshold.
+                        Default: 0.0 (no filtering). Useful values: 0.5 (high-confidence
+                        only), 0.4 (moderate), 0.3 (loose). Per the 2026-05-19 sub2api
+                        survey, max BARE score on a novel finding class was 0.539, so
+                        --min-score 0.5 cleanly separates "known module match" from
+                        "no precise coverage."
+    --encode            Read text from stdin, print L2-normalized 384-dim vector to stdout
+                        (used by the parity check — see Parity Validation below)
+    --version           Print version banner and exit
+    --help              Print help and exit
 
 INPUT:
     INPUT_PATH may be a path to a findings.json file, or "-" / omitted to read stdin.
 ```
 
 Status messages and warnings are written to stderr. The output JSON document is the only thing on stdout, so piping into another tool is safe.
+
+When `--min-score` filters all matches for a finding, BARE emits a one-line
+stderr note with the top raw score so you can see the noise-floor distance
+without re-running:
+
+```
+[*] No matches >= 0.50 for sub2api-setup-open-101.42.109.163 (top raw score: 0.539)
+```
+
+The result is published JSON with `matches: []` rather than a fabricated
+low-confidence match — semantically explicit that no module covers this
+finding class.
 
 ## Why This Matters
 
