@@ -29,13 +29,19 @@ USAGE:
     bare [OPTIONS] [INPUT_PATH]
 
 OPTIONS:
-    --top <N>    Number of top matches to return per finding (default: 3,
-                 capped to corpus size).
-    --encode     Read text from stdin, print L2-normalized 384-dim vector
-                 to stdout (space-separated). Used for parity testing
-                 against Python sentence-transformers.
-    --version    Print version banner and exit.
-    --help       Print this help and exit.
+    --top <N>           Number of top matches to return per finding (default: 3,
+                        capped to corpus size).
+    --min-score <FLOAT> Suppress matches with cosine similarity below this
+                        threshold. Default: 0.0 (no filtering). Useful values:
+                        0.5 (high-confidence only), 0.4 (moderate), 0.3 (loose).
+                        Per the 2026-05-19 sub2api survey, max BARE score on a
+                        novel finding class was 0.539, so --min-score 0.5 cleanly
+                        separates "known module match" from "no precise coverage."
+    --encode            Read text from stdin, print L2-normalized 384-dim vector
+                        to stdout (space-separated). Used for parity testing
+                        against Python sentence-transformers.
+    --version           Print version banner and exit.
+    --help              Print this help and exit.
 
 INPUT:
     INPUT_PATH may be a path to a findings.json file, or "-" / omitted
@@ -98,6 +104,7 @@ fn main() -> Result<()> {
     // ── CLI parsing ───────────────────────────────────────────────────────────
     let args: Vec<String> = std::env::args().collect();
     let mut top_k: usize = 3;
+    let mut min_score: f32 = 0.0;
     let mut input_path: Option<String> = None;
     let mut encode_only = false;
     let mut i = 1;
@@ -122,6 +129,17 @@ fn main() -> Result<()> {
                     .context("--top value must be a positive integer")?;
                 if top_k == 0 {
                     return Err(anyhow!("--top must be >= 1"));
+                }
+            }
+            "--min-score" => {
+                i += 1;
+                min_score = args
+                    .get(i)
+                    .ok_or_else(|| anyhow!("--min-score requires an argument"))?
+                    .parse::<f32>()
+                    .context("--min-score value must be a float (e.g. 0.5)")?;
+                if !(0.0..=1.0).contains(&min_score) {
+                    return Err(anyhow!("--min-score must be in [0.0, 1.0]"));
                 }
             }
             "--encode" => {
@@ -229,6 +247,7 @@ fn main() -> Result<()> {
 
         let matches: Vec<output::Match> = scores
             .iter()
+            .filter(|(_, s)| *s >= min_score)
             .take(top_k)
             .enumerate()
             .map(|(idx, (name, score))| output::Match {
@@ -238,6 +257,14 @@ fn main() -> Result<()> {
                 category: category_from_module(name),
             })
             .collect();
+        if matches.is_empty() && min_score > 0.0 {
+            eprintln!(
+                "[*] No matches >= {:.2} for {} (top raw score: {:.3})",
+                min_score,
+                finding.id,
+                scores.first().map(|(_, s)| *s).unwrap_or(0.0)
+            );
+        }
 
         output_findings.push(output::OutputFinding {
             id:       finding.id.clone(),
